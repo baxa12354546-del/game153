@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>RPG: Final Credits</title>
+    <link href="https://fonts.googleapis.com/css2?family=Russo+One&display=swap" rel="stylesheet">
+    <style>
+        /* --- БАЗА --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #111; margin: 0; padding: 0; overflow: hidden; 
+            user-select: none; width: 100vw; height: 100vh;
+            display: flex; justify-content: center; align-items: center; color: white;
+        }
+
+        #main-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: -3; transition: background 0.8s ease; }
+
+        #game-wrapper {
+            width: 1000px; height: 750px; position: relative;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5); border-radius: 20px; padding: 20px;
+            background: rgba(0,0,0,0.2); box-sizing: border-box;
+        }
+
+        .screen { width: 100%; height: 100%; display: none; flex-direction: column; align-items: center; animation: fade 0.3s ease-out; justify-content: center; }
+        #scr-battle { justify-content: flex-start; padding-top: 10px; }
+        .active { display: flex; }
+        @keyframes fade { from{opacity:0; transform: scale(0.95);} to{opacity:1; transform: scale(1);} }
+
+        #fs-btn {
+            position: fixed; top: 20px; right: 20px; background: rgba(255,255,255,0.15); color: white;
+            border: 1px solid rgba(255,255,255,0.5); padding: 8px 16px; cursor: pointer; z-index: 5000; border-radius: 20px; font-family: 'Russo One';
+        }
+
+        /* --- УВЕДОМЛЕНИЯ --- */
+        #ach-toast {
+            position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(90deg, #f1c40f, #e67e22);
+            color: black; padding: 15px 30px; border-radius: 50px;
+            box-shadow: 0 0 20px rgba(241, 196, 15, 0.8);
+            display: flex; align-items: center; gap: 15px; z-index: 6000;
+            transition: top 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+        .toast-icon { font-size: 30px; }
+        .toast-text { font-family: 'Russo One'; text-transform: uppercase; }
+
+        /* --- ДИАЛОГИ --- */
+        #dialogue-overlay {
+            display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; height: 180px; z-index: 4000;
+            background: rgba(0, 0, 0, 0.9); border: 4px solid #fff; border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,1);
+            animation: slideUp 0.3s ease-out; cursor: pointer;
+        }
+        @keyframes slideUp { from{transform:translate(-50%, 50px); opacity:0;} to{transform:translate(-50%, 0); opacity:1;} }
+        .dia-content { display: flex; align-items: center; height: 100%; padding: 0 20px; gap: 20px; }
+        .dia-portrait { width: 120px; height: 120px; font-size: 100px; background: #333; border: 3px solid #f1c40f; border-radius: 50%; display: flex; justify-content: center; align-items: center; flex-shrink: 0; }
+        .dia-text-box { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        .dia-name { color: #f1c40f; font-family: 'Russo One'; font-size: 24px; margin-bottom: 10px; text-transform: uppercase; }
+        .dia-msg { font-size: 22px; line-height: 1.4; color: #eee; }
+
+        /* --- КАРТА --- */
+        .zones-container { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 900px; height: 500px; overflow-y: auto; padding-right: 10px; }
+        .zone-card { background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 15px; padding: 15px; display: flex; flex-direction: column; gap: 10px; transition: 0.2s; backdrop-filter: blur(5px); }
+        .zone-card:hover { border-color: white; background: rgba(0,0,0,0.7); }
+        .zone-header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 5px; }
+        .z-title { font-family: 'Russo One'; font-size: 22px; color: #fff; }
+        .levels-row { display: flex; gap: 10px; justify-content: space-between; }
+        
+        /* КНОПКИ И ЗАМКИ */
+        .lvl-btn { flex: 1; padding: 10px 0; border: none; border-radius: 8px; font-family: 'Russo One'; font-size: 16px; color: white; cursor: pointer; background: #34495e; border-bottom: 4px solid #2c3e50; transition: 0.1s; position: relative; }
+        .lvl-btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
+        .lvl-boss { background: #c0392b; border-color: #922b21; }
+        .lvl-btn.locked { background: #222 !important; border-color: #111 !important; color: #555; cursor: not-allowed; pointer-events: none; }
+        .lvl-btn.locked::after { content: "🔒"; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 20px; }
+
+        /* БОЙ */
+        .battle-top { width: 100%; height: 80px; display: grid; grid-template-columns: 140px 1fr 140px; align-items: center; background: rgba(0,0,0,0.6); padding: 0 15px; border-radius: 15px; margin-bottom: 10px; box-sizing: border-box; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1); position: relative; z-index: 100; }
+        .center-info { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
+        .stage-bar { display: flex; gap: 10px; margin-bottom: 5px; }
+        .stage-pip { width: 20px; height: 20px; background: #333; border: 2px solid #555; transform: rotate(45deg); transition: 0.3s; box-shadow: 0 0 5px black; }
+        .stage-pip.active { background: #f1c40f; border-color: #f39c12; box-shadow: 0 0 10px #f1c40f; }
+        .stage-pip.passed { background: #27ae60; border-color: #2ecc71; }
+        .top-row-stats { display: flex; gap: 20px; align-items: center; }
+        .gold-display { font-family: 'Russo One'; color: #f1c40f; font-size: 22px; display: flex; align-items: center; gap: 5px; text-shadow: 0 2px 0 black; }
+        .timer-box { font-family: 'Russo One'; font-size: 30px; color: white; border: 3px solid white; border-radius: 50%; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.5); transition: 0.2s; }
+        .timer-low { color: #e74c3c; border-color: #e74c3c; animation: pulse 0.5s infinite; }
+        @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.1)} 100%{transform:scale(1)} }
+        .btn-small { background: #333; color: white; border: 2px solid #555; padding: 5px 10px; cursor: pointer; border-radius: 8px; font-family: 'Russo One'; font-size: 14px; position: relative; z-index: 101; }
+        .btn-small:hover { background: #555; border-color: white; }
+        #shop-btn { background: #e67e22; border-color: #d35400; width: 100%; height: 40px; font-size: 18px; }
+
+        /* ИНВЕНТАРЬ */
+        .inventory-bar { display: flex; gap: 10px; margin-top: 10px; justify-content: center; position: relative; z-index: 102; }
+        .inv-item { background: rgba(0,0,0,0.7); border: 2px solid #777; padding: 5px 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.1s; }
+        .inv-item:hover { border-color: white; background: rgba(50,50,50,0.9); transform: translateY(-2px); }
+        .inv-count { font-family: 'Russo One'; font-size: 16px; color: gold; }
+
+        /* ОБЩИЕ */
+        h1 { color: #f1c40f; text-shadow: 3px 3px 0 #000; text-transform: uppercase; margin: 15px; font-size: 48px; font-family: 'Russo One'; }
+        .btn { padding: 15px 40px; background: #d35400; border: none; border-radius: 12px; border-bottom: 5px solid #a04000; color: white; font-weight: bold; font-size: 24px; cursor: pointer; transition: 0.1s; font-family: 'Russo One'; }
+        .btn:hover { transform: translateY(-2px); filter: brightness(1.2); }
+        .hero-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .hero-card { background: rgba(30, 30, 30, 0.85); padding: 15px; border: 2px solid #555; border-radius: 15px; width: 140px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .hero-card:hover { border-color: #f1c40f; transform: scale(1.05); background: rgba(50,50,50,0.9); }
+        .h-icon { font-size: 60px; display: block; margin-bottom: 5px; }
+
+        /* СЦЕНА */
+        .scene { display: flex; justify-content: space-between; align-items: flex-end; width: 95%; height: 220px; margin-bottom: 10px; position: relative; z-index: 1; }
+        .char { text-align: center; width: 250px; position: relative; display: flex; flex-direction: column; align-items: center; }
+        .char-vis { font-size: 130px; filter: drop-shadow(0 10px 10px black); line-height: 1; transition: transform 0.1s; }
+        .hp-bar { width: 100%; height: 20px; background: #111; border: 2px solid #000; margin-top: 5px; border-radius: 10px; overflow: hidden; }
+        .hp-fill { height: 100%; transition: width 0.3s ease-out; }
+        .hp-h { background: linear-gradient(90deg, #2ecc71, #27ae60); } 
+        .hp-e { background: linear-gradient(90deg, #e74c3c, #c0392b); }
+
+        /* МАТЕМАТИКА */
+        .math-container { display: flex; flex-direction: column; align-items: center; width: 100%; flex-grow: 1; z-index: 5; position: relative; }
+        .math-display { background: rgba(0, 0, 0, 0.8); border: 3px solid #fff; padding: 5px 50px; border-radius: 15px; font-family: 'Russo One', sans-serif; font-size: 50px; color: #fff; margin-bottom: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.8); }
+        .q-mark { color: #8e44ad; font-weight: bold; text-shadow: 0 0 10px #e056fd; }
+        .answers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; width: 700px; margin-bottom: 10px; }
+        .ans-btn { background: #2c3e50; color: white; border: 3px solid #7f8c8d; border-radius: 15px; height: 90px; display: flex; justify-content: center; align-items: center; font-size: 35px; font-family: 'Russo One'; cursor: pointer; transition: all 0.1s; box-shadow: 0 6px 0 #1a252f; }
+        .ans-btn:hover { background: #34495e; transform: translateY(-4px); border-color: #f1c40f; }
+        .ans-btn-correct { background: #27ae60 !important; border-color: #2ecc71 !important; }
+        .ans-btn-wrong { background: #c0392b !important; border-color: #e74c3c !important; animation: shake 0.3s; }
+        .frac { display: inline-flex; flex-direction: column; vertical-align: middle; margin: 0 5px; font-size: 0.8em; }
+        .top { border-bottom: 2px solid white; display: block; text-align: center; line-height: 1.1; }
+        .bot { display: block; text-align: center; line-height: 1.1; }
+
+        /* МОДАЛКИ */
+        .modal-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; justify-content:center; align-items:center; flex-direction: column; }
+        .modal-box { background:#2c3e50; padding:30px; border:4px solid gold; border-radius:20px; text-align:center; box-shadow:0 0 50px black; min-width: 500px; max-width: 700px; position: relative; z-index: 2001; }
+        
+        /* МАГАЗИН */
+        .shop-section { border-top: 1px solid #555; padding-top: 10px; margin-top: 10px; text-align: left; }
+        .shop-section h3 { color: #ddd; margin: 5px 0 10px 0; font-family: 'Russo One'; }
+        .shop-item { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 10px 15px; margin: 5px 0; border-radius: 10px; border: 1px solid #555; }
+        .buy-btn { background: #27ae60; border: none; color: white; padding: 8px 16px; border-radius: 5px; cursor: pointer; font-family: 'Russo One'; font-size: 14px; }
+        .buy-btn:hover { background: #2ecc71; }
+        .buy-btn:disabled { background: #7f8c8d; cursor: not-allowed; }
+        
+        /* АЧИВКИ */
+        .ach-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+        .ach-item { background: rgba(0,0,0,0.4); padding: 10px; border: 1px solid #555; border-radius: 8px; display: flex; align-items: center; gap: 10px; opacity: 0.5; filter: grayscale(1); }
+        .ach-item.unlocked { opacity: 1; filter: grayscale(0); border-color: gold; background: rgba(255, 215, 0, 0.1); }
+        
+        /* ПОБЕДНЫЙ ЭКРАН И ТИТРЫ */
+        .win-stat { font-size: 24px; margin: 10px 0; color: #ddd; }
+        .win-stat span { color: gold; font-weight: bold; }
+
+        .credits-box { margin-top: 30px; width: 100%; padding: 20px; border-top: 1px solid #555; border-bottom: 1px solid #555; background: rgba(0,0,0,0.3); animation: slideInUp 1s; }
+        .cred-title { font-size: 14px; color: #aaa; letter-spacing: 3px; margin-bottom: 10px; font-family: sans-serif; text-transform: uppercase; }
+        .cred-name { font-family: 'Russo One'; font-size: 36px; color: #fff; text-shadow: 0 0 15px #f1c40f; animation: glow 2s infinite alternate; margin-bottom: 5px; }
+        .cred-sub { font-family: 'Russo One'; font-size: 22px; color: #f39c12; }
+        
+        @keyframes glow { from { text-shadow: 0 0 5px #f1c40f; } to { text-shadow: 0 0 25px #f1c40f, 0 0 10px white; } }
+        @keyframes slideInUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .shake { animation: shake 0.3s; }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-10px)} 75%{transform:translateX(10px)} }
+    </style>
+</head>
+<body>
+
+<div id="main-bg"></div>
+<button id="fs-btn" onclick="toggleFS()">⛶ Экран</button>
+
+<div id="ach-toast">
+    <div class="toast-icon">🏆</div>
+    <div>
+        <div class="toast-text">Достижение!</div>
+        <div id="toast-name" style="font-size:12px;opacity:0.8;">...</div>
+    </div>
+</div>
+
+<div id="game-wrapper">
+
+    <div id="dialogue-overlay" onclick="nextDialogue()">
+        <div class="dia-content">
+            <div id="dia-portrait" class="dia-portrait">😎</div>
+            <div class="dia-text-box">
+                <div id="dia-name" class="dia-name">ГЕРОЙ</div>
+                <div id="dia-msg" class="dia-msg">...</div>
+            </div>
+            <div style="font-size:30px; animation:blink 1s infinite;">▶</div>
+        </div>
+    </div>
+
+    <div id="modal-achievements" class="modal-overlay">
+        <div class="modal-box">
+            <h1 style="color:gold;">🏆 ДОСТИЖЕНИЯ</h1>
+            <div id="ach-list" class="ach-grid"></div>
+            <button class="btn" style="margin-top:20px; background:#555;" onclick="closeAch()">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+
+    <div id="modal-story" class="modal-overlay">
+        <div class="modal-box" style="border-color: #3498db;">
+            <h1 id="story-title">УРОВЕНЬ ЗАЧИЩЕН</h1>
+            <div id="story-text-content" style="font-family:'Russo One'; font-size:24px; color:#eee; margin-bottom:30px;">...</div>
+            <button class="btn" onclick="proceedNext()">ДАЛЕЕ ▶</button>
+        </div>
+    </div>
+
+    <div id="modal-loss" class="modal-overlay">
+        <div class="modal-box" style="border-color: red;">
+            <h1 style="color:red; margin:0;">YOU DIED</h1>
+            <button class="btn" onclick="returnToMap()">НА КАРТУ</button>
+        </div>
+    </div>
+
+    <div id="modal-shop" class="modal-overlay">
+        <div class="modal-box">
+            <h1 style="color:gold; margin:10px;">МАГАЗИН</h1>
+            <div style="font-size: 20px; margin-bottom: 20px;">Твое золото: <span id="shop-gold" style="color:yellow">0</span> 💰</div>
+            
+            <div class="shop-section">
+                <h3>🛠️ СНАРЯЖЕНИЕ</h3>
+                <div class="shop-item">
+                    <div style="text-align:left;"><div style="font-weight:bold; font-size:18px;">⚔️ Заточка</div><small>+5 к урону</small></div>
+                    <button id="btn-buy-dmg" class="buy-btn" onclick="buyUpgrade('dmg')">100 💰</button>
+                </div>
+                <div class="shop-item">
+                    <div style="text-align:left;"><div style="font-weight:bold; font-size:18px;">❤ Тренировка</div><small>+20 к Макс.HP</small></div>
+                    <button id="btn-buy-hp" class="buy-btn" onclick="buyUpgrade('hp')">80 💰</button>
+                </div>
+            </div>
+
+            <div class="shop-section">
+                <h3>🎒 РАСХОДНИКИ</h3>
+                <div class="shop-item">
+                    <div style="text-align:left;"><div style="font-weight:bold; font-size:18px;">🍷 Зелье здоровья</div><small>Восстанавливает 50 HP</small></div>
+                    <button id="btn-buy-pot" class="buy-btn" onclick="buyItem('potion')">50 💰</button>
+                </div>
+                <div class="shop-item">
+                    <div style="text-align:left;"><div style="font-weight:bold; font-size:18px;">💣 Бомба</div><small>50 урона врагу</small></div>
+                    <button id="btn-buy-bomb" class="buy-btn" onclick="buyItem('bomb')">75 💰</button>
+                </div>
+            </div>
+            <button class="btn" style="margin-top:20px; background:#555;" onclick="closeShop()">ЗАКРЫТЬ</button>
+        </div>
+    </div>
+
+    <div id="scr-win" class="screen">
+        <h1 style="font-size: 60px; color: gold; text-shadow: 0 0 20px orange; margin-bottom: 10px;">🏆 ПОБЕДА! 🏆</h1>
+        <div style="font-size: 24px; margin-bottom: 20px; font-family:'Russo One';">ТЫ СПАС МИР МАТЕМАТИКИ!</div>
+        
+        <div style="background: rgba(0,0,0,0.5); padding: 15px; border-radius: 15px; width: 600px; border: 2px solid gold;">
+            <div class="win-stat">Повержено врагов: <span id="win-kills">0</span> 💀</div>
+            <div class="win-stat">Решено примеров: <span id="win-solves">0</span> 🧠</div>
+            <div class="win-stat">Собрано золота: <span id="win-gold">0</span> 💰</div>
+        </div>
+
+        <div class="credits-box">
+            <div class="cred-title">РАЗРАБОТЧИК:</div>
+            <div class="cred-name">Дуганов Бахтияр Романович</div>
+            <div class="cred-sub">10 "А" класс</div>
+        </div>
+
+        <button class="btn" style="margin-top: 20px; background: #27ae60; border-color: #2ecc71;" onclick="location.reload()">НОВАЯ ИГРА</button>
+    </div>
+
+    <div id="scr-hero" class="screen active">
+        <h1>ВЫБЕРИ БОЙЦА</h1>
+        <div class="hero-grid">
+            <div class="hero-card" onclick="pickHero('warrior')"><span class="h-icon">⚔️</span><b>Воин</b><br><small>Баланс</small></div>
+            <div class="hero-card" onclick="pickHero('mage')"><span class="h-icon">🧙‍♂️</span><b>Маг</b><br><small>Урон+</small></div>
+            <div class="hero-card" onclick="pickHero('ninja')"><span class="h-icon">🥷</span><b>Ниндзя</b><br><small>Крит+</small></div>
+            <div class="hero-card" onclick="pickHero('paladin')"><span class="h-icon">🛡️</span><b>Паладин</b><br><small>Танк</small></div>
+            <div class="hero-card" onclick="pickHero('golem')"><span class="h-icon">🗿</span><b>Голем</b><br><small>Жир+</small></div>
+            <div class="hero-card" onclick="pickHero('assassin')"><span class="h-icon">🗡️</span><b>Убийца</b><br><small>Урон+++</small></div>
+            <div class="hero-card" onclick="pickHero('priest')"><span class="h-icon">⚕️</span><b>Жрец</b><br><small>Хил</small></div>
+            <div class="hero-card" onclick="pickHero('barbarian')"><span class="h-icon">🪓</span><b>Варвар</b><br><small>Сила</small></div>
+        </div>
+    </div>
+
+    <div id="scr-world" class="screen">
+        <h1>ВЫБОР УРОВНЯ</h1>
+        <div class="zones-container">
+            <button class="btn" onclick="openAch()" style="background:#f39c12; width:100%; margin-bottom:15px;">🏆 ДОСТИЖЕНИЯ</button>
+
+            <div class="zone-card" style="border-left: 5px solid #2ecc71;">
+                <div class="zone-header"><div class="z-title">🌲 ТЕМНЫЙ ЛЕС</div><div class="z-desc">Сложение (+)</div></div>
+                <div class="levels-row">
+                    <button class="lvl-btn" data-z="forest" data-s="1" onclick="pickLevel('forest', 1)">Ур. 1</button>
+                    <button class="lvl-btn" data-z="forest" data-s="2" onclick="pickLevel('forest', 2)">Ур. 2</button>
+                    <button class="lvl-btn lvl-boss" data-z="forest" data-s="3" onclick="pickLevel('forest', 3)">☠️ БОСС</button>
+                </div>
+            </div>
+            <div class="zone-card" style="border-left: 5px solid #3498db;">
+                <div class="zone-header"><div class="z-title">🦇 ГЛУБОКАЯ ПЕЩЕРА</div><div class="z-desc">Умножение (×)</div></div>
+                <div class="levels-row">
+                    <button class="lvl-btn" data-z="cave" data-s="1" onclick="pickLevel('cave', 1)">Ур. 1</button>
+                    <button class="lvl-btn" data-z="cave" data-s="2" onclick="pickLevel('cave', 2)">Ур. 2</button>
+                    <button class="lvl-btn lvl-boss" data-z="cave" data-s="3" onclick="pickLevel('cave', 3)">☠️ БОСС</button>
+                </div>
+            </div>
+            <div class="zone-card" style="border-left: 5px solid #00d2ff;">
+                <div class="zone-header"><div class="z-title">❄️ ЛЕДЯНАЯ ПУСТОШЬ</div><div class="z-desc">Деление (:)</div></div>
+                <div class="levels-row">
+                    <button class="lvl-btn" data-z="ice" data-s="1" onclick="pickLevel('ice', 1)">Ур. 1</button>
+                    <button class="lvl-btn" data-z="ice" data-s="2" onclick="pickLevel('ice', 2)">Ур. 2</button>
+                    <button class="lvl-btn lvl-boss" data-z="ice" data-s="3" onclick="pickLevel('ice', 3)">☠️ БОСС</button>
+                </div>
+            </div>
+            <div class="zone-card" style="border-left: 5px solid #8e44ad;">
+                <div class="zone-header"><div class="z-title">🚀 ОТКРЫТЫЙ КОСМОС</div><div class="z-desc">Уравнения (?)</div></div>
+                <div class="levels-row">
+                    <button class="lvl-btn" data-z="space" data-s="1" onclick="pickLevel('space', 1)">Ур. 1</button>
+                    <button class="lvl-btn" data-z="space" data-s="2" onclick="pickLevel('space', 2)">Ур. 2</button>
+                    <button class="lvl-btn lvl-boss" data-z="space" data-s="3" onclick="pickLevel('space', 3)">☠️ БОСС</button>
+                </div>
+            </div>
+            <div class="zone-card" style="border-left: 5px solid #e74c3c;">
+                <div class="zone-header"><div class="z-title">🔥 ПРЕИСПОДНЯЯ</div><div class="z-desc">Дроби (%)</div></div>
+                <div class="levels-row">
+                    <button class="lvl-btn" data-z="hell" data-s="1" onclick="pickLevel('hell', 1)">Ур. 1</button>
+                    <button class="lvl-btn" data-z="hell" data-s="2" onclick="pickLevel('hell', 2)">Ур. 2</button>
+                    <button class="lvl-btn lvl-boss" data-z="hell" data-s="3" onclick="pickLevel('hell', 3)">☠️ ФИНАЛ</button>
+                </div>
+            </div>
+            <div style="display:flex; justify-content:center; align-items:center;">
+                <button class="btn" onclick="show('scr-hero')" style="background:#555; width:100%;">🔙 СМЕНИТЬ ГЕРОЯ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="scr-battle" class="screen">
+        <div class="battle-top">
+            <button id="surrender-btn" class="btn-small" onclick="surrender()">🏳️ КАРТА</button>
+            <div class="center-info">
+                <div class="stage-bar">
+                    <div id="st-1" class="stage-pip active"></div>
+                    <div id="st-2" class="stage-pip"></div>
+                    <div id="st-3" class="stage-pip"></div>
+                </div>
+                <div class="top-row-stats">
+                    <div id="timer-display" class="timer-box">20</div>
+                    <div class="gold-display"><span id="ui-gold">0</span> 💰</div>
+                </div>
+            </div>
+            <button id="shop-btn" class="btn-small" onclick="openShop()">🛒 МАГАЗИН</button>
+        </div>
+
+        <div class="scene">
+            <div class="char">
+                <div id="hero-vis" class="char-vis">⚔️</div>
+                <div class="hp-bar"><div id="hp-h" class="hp-fill hp-h" style="width:100%"></div></div>
+                <div class="hp-text"><span id="val-h">200</span> HP</div>
+                <div class="inventory-bar">
+                    <div class="inv-item" onclick="useItem('potion')" title="Лечение +50">
+                        <span class="inv-icon">🍷</span>
+                        <span id="inv-potion" class="inv-count">0</span>
+                    </div>
+                    <div class="inv-item" onclick="useItem('bomb')" title="Урон 50">
+                        <span class="inv-icon">💣</span>
+                        <span id="inv-bomb" class="inv-count">0</span>
+                    </div>
+                </div>
+            </div>
+            <div class="char">
+                <div id="enemy-vis" class="char-vis">🐺</div>
+                <div class="hp-bar"><div id="hp-e" class="hp-fill hp-e" style="width:100%"></div></div>
+                <div class="hp-text"><span id="val-e">100</span> HP</div>
+            </div>
+        </div>
+
+        <div class="math-container">
+            <div id="math-display" class="math-display">Загрузка...</div>
+            <div id="answers-grid" class="answers-grid"></div>
+        </div>
+        <div id="log-msg" style="height:30px; margin-top:5px; color:#bbb; font-style:italic;"></div>
+    </div>
+</div>
+
+<script>
+    const BG_COLORS = {
+        main: "linear-gradient(135deg, #2c3e50, #4a3121)",
+        forest: "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
+        cave: "linear-gradient(135deg, #141e30, #243b55)",
+        ice: "linear-gradient(135deg, #2980b9, #6dd5fa, #ffffff)",
+        space: "linear-gradient(135deg, #2c0e37, #000000, #4b0082)",
+        hell: "linear-gradient(135deg, #960000, #c0392b, #e74c3c)"
+    };
+    
+    const ACHIEVEMENTS_DATA = [
+        { id: 'first', icon: '🩸', title: 'Первая кровь', desc: 'Убить 1 врага' },
+        { id: 'hunter', icon: '☠️', title: 'Терминатор', desc: 'Убить 50 врагов' },
+        { id: 'rich', icon: '💰', title: 'Магнат', desc: 'Накопить 500 золота' },
+        { id: 'speed', icon: '⚡', title: 'Флэш', desc: 'Ответ за 2 сек' },
+        { id: 'math', icon: '🧠', title: 'Математик', desc: 'Решить 20 примеров' },
+        { id: 'survivor', icon: '❤️', title: 'Выживший', desc: 'Победа с HP < 20%' },
+        { id: 'bomber', icon: '💣', title: 'Подрывник', desc: 'Убить бомбой' }
+    ];
+
+    const DIALOGUES = {
+        forest_lvl1: [
+            {name: "ГЕРОЙ", text: "Ну и заросли... Тут вообще есть тропинка?", who: "hero"},
+            {name: "???", text: "ХРРУСТЬ...", who: "enemy", icon: "🌲"},
+            {name: "ГЕРОЙ", text: "Эй, кто там хрустит? Выходи, я вооружился математикой!", who: "hero"}
+        ],
+        forest_lvl2: [
+            {name: "ГЕРОЙ", text: "Фух, комары тут размером с кулак.", who: "hero"},
+            {name: "ДИКИЙ КАБАН", text: "ХРЮ-ХРЮ! (Злой взгляд)", who: "enemy", icon: "🐗"},
+            {name: "ГЕРОЙ", text: "О, а вот и шашлык побежал. Стоять!", who: "hero"}
+        ],
+        forest_lvl3: [
+            {name: "ВОЖАК", text: "Рррр... Ты зашел слишком далеко, человек.", who: "enemy", icon: "🐺"},
+            {name: "ГЕРОЙ", text: "Я ищу выход. И золото. В основном золото.", who: "hero"},
+            {name: "ВОЖАК", text: "Ты найдешь здесь только клыки! В АТАКУ!", who: "enemy", icon: "🐺"}
+        ],
+        cave_lvl1: [
+            {name: "ГЕРОЙ", text: "Эхо-о-о! Есть кто дома?", who: "hero"},
+            {name: "ГОЛОС", text: "Уходи-и-и...", who: "enemy", icon: "👻"},
+            {name: "ГЕРОЙ", text: "Так, у меня факел и таблица умножения. Я не боюсь темноты!", who: "hero"}
+        ],
+        cave_lvl2: [
+            {name: "ГЕРОЙ", text: "Под ногами хрустят кости. Надеюсь, куриные.", who: "hero"},
+            {name: "СКЕЛЕТ", text: "КЛАЦ-КЛАЦ! Свежее мясо!", who: "enemy", icon: "💀"},
+            {name: "ГЕРОЙ", text: "А ты, приятель, явно прогуливал уроки анатомии. Сейчас разберем!", who: "hero"}
+        ],
+        cave_lvl3: [
+            {name: "МЫШИНЫЙ КОРОЛЬ", text: "Писк-писк! Это моя гора золота!", who: "enemy", icon: "🦇"},
+            {name: "ГЕРОЙ", text: "Ты же летучая мышь, зачем тебе деньги?", who: "hero"},
+            {name: "МЫШИНЫЙ КОРОЛЬ", text: "Чтобы купить очки! Я слепой! УМРИ!", who: "enemy", icon: "🦇"}
+        ],
+        ice_lvl1: [
+            {name: "ГЕРОЙ", text: "Бррр... Зуб на зуб не попадает.", who: "hero"},
+            {name: "СНЕГОВИК", text: "А ты думал, в сказку попал?", who: "enemy", icon: "⛄"},
+            {name: "ГЕРОЙ", text: "Говорящий снеговик? Видимо, у меня галлюцинации от холода.", who: "hero"}
+        ],
+        ice_lvl2: [
+            {name: "ГЕРОЙ", text: "Тут так скользко, что я сейчас сяду на шпагат.", who: "hero"},
+            {name: "ЙЕТИ", text: "ГРАААРГХ!", who: "enemy", icon: "🥶"},
+            {name: "ГЕРОЙ", text: "Будь здоров! Или ты меня съесть хочешь?", who: "hero"}
+        ],
+        ice_lvl3: [
+            {name: "ЛЕДЯНОЙ ГОЛЕМ", text: "ТВОЕ. СЕРДЦЕ. СТАНЕТ. ЛЬДОМ.", who: "enemy", icon: "🧊"},
+            {name: "ГЕРОЙ", text: "А твое сердце растает, когда я решу этот пример!", who: "hero"},
+            {name: "ЛЕДЯНОЙ ГОЛЕМ", text: "НЕТ! ТОЛЬКО НЕ ДЕЛЕНИЕ! АААРГХ!", who: "enemy", icon: "🧊"}
+        ],
+        space_lvl1: [
+            {name: "ГЕРОЙ", text: "Вау! Невесомость! Я лечу!", who: "hero"},
+            {name: "НЛО", text: "Бип-боп. Обнаружена примитивная форма жизни.", who: "enemy", icon: "🛸"},
+            {name: "ГЕРОЙ", text: "Эй, кто тут примитивный? Я знаю уравнения!", who: "hero"}
+        ],
+        space_lvl2: [
+            {name: "ГЕРОЙ", text: "В скафандре чешется нос. Это пытка.", who: "hero"},
+            {name: "РОБОТ", text: "УНИЧТОЖИТЬ. ЧЕЛОВЕКА.", who: "enemy", icon: "🤖"},
+            {name: "ГЕРОЙ", text: "Где у тебя кнопка выключения? Или придется бить?", who: "hero"}
+        ],
+        space_lvl3: [
+            {name: "ИНОПЛАНЕТЯНИН", text: "⍙⟒ ⏃⍀⟒ ⏁⊬⟒ ⎎⎍⏁⎍⍀⟒.", who: "enemy", icon: "👽"},
+            {name: "ГЕРОЙ", text: "Чего? Говори на человеческом!", who: "hero"},
+            {name: "ИНОПЛАНЕТЯНИН", text: "Земляне глупы. Мы заберем ваш мозг для опытов.", who: "enemy", icon: "👽"},
+            {name: "ГЕРОЙ", text: "Мой мозг занят вычислениями! Отвали!", who: "hero"}
+        ],
+        hell_lvl1: [
+            {name: "ГЕРОЙ", text: "Ой, горячо! Пол — это лава. Буквально!", who: "hero"},
+            {name: "БЕС", text: "Хи-хи-хи! Поджарим туриста!", who: "enemy", icon: "👺"},
+            {name: "ГЕРОЙ", text: "Я тебе сейчас рога пообломаю!", who: "hero"}
+        ],
+        hell_lvl2: [
+            {name: "ГЕРОЙ", text: "Пахнет серой и нерешенными контрольными.", who: "hero"},
+            {name: "ЦЕРБЕР", text: "ГАВ! ГАВ! ГАВ!", who: "enemy", icon: "🐺"},
+            {name: "ГЕРОЙ", text: "Хороший пёсик... У меня нет косточки, но есть дроби!", who: "hero"}
+        ],
+        hell_lvl3: [
+            {name: "ДЕМОН", text: "КТО ПОСМЕЛ ТРЕВОЖИТЬ МЕНЯ?!", who: "enemy", icon: "👹"},
+            {name: "ГЕРОЙ", text: "Это я, Герой Математики! Пришел закрыть этот портал!", who: "hero"},
+            {name: "ДЕМОН", text: "ТЫ ОСТАНЕШЬСЯ ЗДЕСЬ НАВЕЧНО! РЕШАТЬ ЗАДАЧИ БЕЗ ОТВЕТОВ!", who: "enemy", icon: "👹"},
+            {name: "ГЕРОЙ", text: "Ну уж нет! К бою!", who: "hero"}
+        ]
+    };
+
+    const STORY_TEXTS = {
+        forest: "Волк повержен! Впереди пещера...", cave: "Мышь пала! Виден свет...",
+        ice: "Голем разбит! Летим в космос!", space: "Пришельцы разбиты! Портал в Ад!", hell: "Демон повержен! ТЫ СПАС МИР!"
+    };
+    const ZONE_ORDER = ['forest', 'cave', 'ice', 'space', 'hell'];
+
+    let achievementsState = {}; 
+    let stats = { kills: 0, solves: 0 };
+
+    let hero = { hp: 200, max: 200, dmg: 20, gold: 0, icon: '⚔️', inventory: { potion: 1, bomb: 1 } };
+    let enemy = { hp: 100, max: 100, dmg: 10 };
+    let zone = 'forest', zoneStage = 1, wave = 1;
+    let mathAnswer = 0, hellDenom = 1, timer = 20, timerInterval = null;
+    let costDmg = 100, costHp = 80;
+    let dialogueQueue = [], dialogueCallback = null;
+    let unlockedIndex = 0; // 0 = first level
+
+    window.onload = () => { resize(); setBg('main'); updateMapLocks(); };
+    window.onresize = resize;
+    function resize() { document.getElementById('game-wrapper').style.transform = `scale(${Math.min(window.innerWidth/1000, window.innerHeight/750)})`; }
+    function setBg(k) { document.getElementById('main-bg').style.background = BG_COLORS[k] || BG_COLORS.main; }
+    function toggleFS() { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+    function show(id) { 
+        document.querySelectorAll('.screen').forEach(e => e.classList.remove('active')); 
+        document.getElementById(id).classList.add('active'); 
+        if(id === 'scr-world') updateMapLocks();
+    }
+
+    // --- ЛОГИКА ЗАМКОВ ---
+    function updateMapLocks() {
+        let btns = document.querySelectorAll('.lvl-btn');
+        btns.forEach(btn => {
+            let z = btn.dataset.z;
+            let s = parseInt(btn.dataset.s);
+            let zIdx = ZONE_ORDER.indexOf(z);
+            let globalIdx = zIdx * 3 + (s - 1);
+
+            if(globalIdx > unlockedIndex) {
+                btn.classList.add('locked');
+            } else {
+                btn.classList.remove('locked');
+            }
+        });
+    }
+
+    // --- МАГАЗИН ---
+    function openShop() { if(hero.hp <= 0) return; stopTimer(); document.getElementById('modal-shop').style.display = 'flex'; updateShopUI(); }
+    function closeShop() { document.getElementById('modal-shop').style.display = 'none'; if(document.getElementById('scr-battle').classList.contains('active') && document.getElementById('dialogue-overlay').style.display === 'none') startTimer(); }
+    
+    function updateShopUI() {
+        document.getElementById('shop-gold').innerText = hero.gold;
+        let bDmg = document.getElementById('btn-buy-dmg'); bDmg.innerText = `+5 Урона (${costDmg}💰)`; bDmg.disabled = hero.gold < costDmg;
+        let bHp = document.getElementById('btn-buy-hp'); bHp.innerText = `+20 MaxHP (${costHp}💰)`; bHp.disabled = hero.gold < costHp;
+        
+        document.getElementById('btn-buy-pot').disabled = hero.gold < 50;
+        document.getElementById('btn-buy-bomb').disabled = hero.gold < 75;
+    }
+
+    function buyUpgrade(type) {
+        if(type==='dmg' && hero.gold >= costDmg) { hero.gold -= costDmg; hero.dmg += 5; costDmg += 50; log("Куплено: Урон +5"); }
+        else if(type==='hp' && hero.gold >= costHp) { hero.gold -= costHp; hero.max += 20; hero.hp += 20; costHp += 40; log("Куплено: HP +20"); }
+        updateShopUI(); updateUI(); checkAchievements();
+    }
+    function buyItem(type) {
+        let cost = (type === 'potion') ? 50 : 75;
+        if(hero.gold >= cost) { hero.gold -= cost; hero.inventory[type]++; log(`Куплено: ${type === 'potion' ? 'Зелье' : 'Бомба'}!`, 'gold'); }
+        updateShopUI(); updateUI();
+    }
+    function useItem(type) {
+        if (hero.inventory[type] > 0) {
+            hero.inventory[type]--;
+            if (type === 'potion') { hero.hp = Math.min(hero.max, hero.hp + 50); log("Зелье: +50 HP", "#2ecc71"); }
+            else if (type === 'bomb') { enemy.hp -= 50; shake('enemy-vis'); log("БОМБА! -50", "#e74c3c"); if (enemy.hp <= 0) { unlockAchievement('bomber'); winWave(); } }
+            updateUI();
+        } else log("Нет предмета!", "#7f8c8d");
+    }
+
+    // --- АЧИВКИ ---
+    function openAch() {
+        let list = document.getElementById('ach-list'); list.innerHTML = "";
+        ACHIEVEMENTS_DATA.forEach(ach => {
+            let u = achievementsState[ach.id];
+            list.innerHTML += `<div class="ach-item ${u?'unlocked':''}"><div class="ach-icon">${ach.icon}</div><div><div style="font-weight:bold">${ach.title}</div><small>${ach.desc}</small></div></div>`;
+        });
+        document.getElementById('modal-achievements').style.display = 'flex';
+    }
+    function closeAch() { document.getElementById('modal-achievements').style.display = 'none'; }
+    function unlockAchievement(id) {
+        if(achievementsState[id]) return; achievementsState[id] = true;
+        let d = ACHIEVEMENTS_DATA.find(x=>x.id===id);
+        if(d) { document.getElementById('toast-name').innerText = d.title; let t = document.getElementById('ach-toast'); t.style.top = "20px"; setTimeout(() => t.style.top = "-100px", 3000); }
+    }
+    function checkAchievements() {
+        if(stats.kills >= 1) unlockAchievement('first');
+        if(stats.kills >= 50) unlockAchievement('hunter');
+        if(hero.gold >= 500) unlockAchievement('rich');
+        if(stats.solves >= 20) unlockAchievement('math');
+    }
+
+    // --- ЛОГИКА ---
+    function startDialogue(k, cb) { if (!DIALOGUES[k]) { if(cb) cb(); return; } dialogueQueue = [...DIALOGUES[k]]; dialogueCallback = cb; showDialogueStep(); }
+    function showDialogueStep() {
+        if (dialogueQueue.length === 0) { document.getElementById('dialogue-overlay').style.display = 'none'; if(dialogueCallback) dialogueCallback(); return; }
+        let l = dialogueQueue[0]; document.getElementById('dialogue-overlay').style.display = 'flex';
+        document.getElementById('dia-name').innerText = l.name; document.getElementById('dia-msg').innerText = l.text;
+        document.getElementById('dia-portrait').innerText = (l.who==='hero') ? hero.icon : (l.icon||'💀');
+        document.getElementById('dia-portrait').style.borderColor = (l.who==='hero') ? '#f1c40f' : '#c0392b';
+    }
+    function nextDialogue() { dialogueQueue.shift(); showDialogueStep(); }
+
+    function surrender() { if(confirm("Сдаться?")) { stopTimer(); show('scr-world'); setBg('main'); } }
+    
+    function pickHero(t) {
+        const i = { warrior:'⚔️', mage:'🧙‍♂️', ninja:'🥷', paladin:'🛡️', golem:'🗿', assassin:'🗡️', priest:'⚕️', barbarian:'🪓' };
+        hero.icon = i[t];
+        if(t==='golem') { hero.max=500; hero.dmg=15; } else if(t==='mage') { hero.max=150; hero.dmg=50; } else if(t==='assassin') { hero.max=180; hero.dmg=60; }
+        else if(t==='barbarian') { hero.max=300; hero.dmg=35; } else { hero.max=250; hero.dmg=25; }
+        hero.hp = hero.max; document.getElementById('hero-vis').innerText = hero.icon; show('scr-world');
+    }
+    
+    function pickLevel(z, s) { 
+        zone = z; zoneStage = s; setBg(z); wave = 1; show('scr-battle'); updateStageVisuals(); updateUI();
+        let dialogueKey = zone + '_lvl' + s;
+        startDialogue(dialogueKey, () => nextWave());
+    }
+
+    function startTimer() { stopTimer(); timer = 20; updateTimerVisual(); timerInterval = setInterval(() => { timer--; updateTimerVisual(); if(timer <= 0) { stopTimer(); timeOutPunishment(); } }, 1000); }
+    function stopTimer() { clearInterval(timerInterval); }
+    function updateTimerVisual() { let el = document.getElementById('timer-display'); el.innerText = timer; if(timer <= 5) el.classList.add('timer-low'); else el.classList.remove('timer-low'); }
+    function timeOutPunishment() { log("ВРЕМЯ!", "red"); hero.hp -= enemy.dmg; shake('hero-vis'); if(hero.hp <= 0) gameOver(); else { updateUI(); setTimeout(genMath, 1000); } }
+    function updateStageVisuals() { for(let i=1; i<=3; i++) { let p = document.getElementById('st-'+i); p.className = 'stage-pip'; if(i < zoneStage) p.classList.add('passed'); if(i === zoneStage) p.classList.add('active'); } }
+
+    function nextWave() {
+        let isBoss = (wave % 5 === 0);
+        let scale = ZONE_ORDER.indexOf(zone) * 2 + (zoneStage-1) * 2;
+        enemy.max = isBoss ? 250 + scale*60 : 70 + scale*25; enemy.hp = enemy.max; enemy.dmg = 10 + scale*4;
+        let mobs = { forest: ['🐺','🐗','🐻'], cave: ['🦇','💀','👁️'], ice: ['❄️','⛄','🥶'], space: ['👽','🤖','🛸'], hell: ['🔥','👺','👹'] };
+        let ico = (mobs[zone]||mobs.forest)[isBoss ? 2 : Math.floor(Math.random()*2)];
+        document.getElementById('enemy-vis').innerText = ico; document.getElementById('enemy-vis').style.fontSize = isBoss ? "200px" : "130px";
+        updateUI();
+        genMath();
+    }
+
+    function genMath() {
+        let d = document.getElementById('math-display');
+        let html = ""; mathAnswer = 0; let boost = (zoneStage - 1) * 6;
+        if (zone === 'space') {
+            let r = Math.random();
+            if(r < 0.33) { let a=Math.floor(Math.random()*15)+5+boost, b=Math.floor(Math.random()*15)+5; mathAnswer=a; html=`<span class="q-mark">?</span> + ${b} = ${a+b}`; } 
+            else if (r < 0.66) { let a=Math.floor(Math.random()*20)+10+boost, b=Math.floor(Math.random()*(a-5))+1; mathAnswer=b; html=`${a} - <span class="q-mark">?</span> = ${a-b}`; } 
+            else { let a=Math.floor(Math.random()*8)+2, b=Math.floor(Math.random()*8)+2; mathAnswer=b; html=`${a} × <span class="q-mark">?</span> = ${a*b}`; }
+        } else if(zone === 'hell') {
+            let den=Math.floor(Math.random()*6)+3, n1=Math.floor(Math.random()*(den-1))+1, n2=Math.floor(Math.random()*(den-n1)); if(n2<1) n2=1; mathAnswer=n1+n2; hellDenom=den;
+            html=`<span class="frac"><span class="top">${n1}</span><span class="bot">${den}</span></span> + <span class="frac"><span class="top">${n2}</span><span class="bot">${den}</span></span> = ?`;
+        } else if (zone === 'ice') {
+            let b=Math.floor(Math.random()*9)+2, c=Math.floor(Math.random()*10)+2+zoneStage; mathAnswer=c; html=`${b*c} : ${b} = ?`;
+        } else if(zone === 'cave') {
+            let a=Math.floor(Math.random()*(9+zoneStage))+2, b=Math.floor(Math.random()*9)+2; mathAnswer=a*b; html=`${a} × ${b} = ?`;
+        } else { 
+            let a=Math.floor(Math.random()*(40+boost)), b=Math.floor(Math.random()*(30+boost)); mathAnswer=a+b; html=`${a} + ${b} = ?`;
+        }
+        d.innerHTML = html; genButtons(mathAnswer); startTimer();
+    }
+
+    function genButtons(corr) {
+        let g = document.getElementById('answers-grid'); g.innerHTML = ""; let opts = [corr];
+        for(let i=0; i<50; i++) { if(opts.length>=4)break; let f=corr+(Math.floor(Math.random()*20)-10); if(f>0 && f!==corr && !opts.includes(f)) opts.push(f); }
+        while(opts.length<4) opts.push(opts[opts.length-1]+1);
+        opts.sort(()=>Math.random()-0.5);
+        opts.forEach(v => {
+            let b = document.createElement('div'); b.className = 'ans-btn';
+            if(zone==='hell') b.innerHTML=`<span class="frac"><span class="top">${v}</span><span class="bot">${hellDenom}</span></span>`; else b.innerText=v;
+            b.onclick = function() { checkAnswer(v, b); }; g.appendChild(b);
+        });
+    }
+
+    function checkAnswer(v, b) {
+        stopTimer();
+        if(v === mathAnswer) {
+            let reward = Math.floor(Math.random() * 4) + 2; 
+            hero.gold += reward;
+            b.classList.add('ans-btn-correct'); log(`Верно! +${reward} 💰`, "#2ecc71"); 
+            stats.solves++;
+            if(timer >= 18) unlockAchievement('speed'); checkAchievements(); updateUI();
+            setTimeout(() => { enemy.hp -= hero.dmg; shake('enemy-vis'); if(enemy.hp <= 0) winWave(); else genMath(); updateUI(); }, 300);
+        } else {
+            b.classList.add('ans-btn-wrong'); log("Ошибка!", "red"); shake('hero-vis'); hero.hp -= enemy.dmg;
+            if(hero.hp <= 0) gameOver(); else { updateUI(); setTimeout(genMath, 500); }
+        }
+    }
+
+    function winWave() {
+        let r = Math.floor(Math.random()*10)+10+(zoneStage*5); hero.gold += r; stats.kills++; log(`Победа! +${r} 💰`, "gold"); wave++;
+        if(hero.hp/hero.max < 0.2) unlockAchievement('survivor'); checkAchievements();
+        if(wave > 5) { stopTimer(); if (zoneStage < 3) showDialogue("УРОВЕНЬ ПРОЙДЕН", "Враги повержены!", false); else showDialogue("БОСС ПОВЕРЖЕН!", STORY_TEXTS[zone], true); } 
+        else nextWave(); 
+    }
+
+    function showDialogue(t, txt, fin) {
+        document.getElementById('story-title').innerText = t; document.getElementById('story-text-content').innerText = txt;
+        document.getElementById('modal-story').style.display = 'flex'; document.getElementById('modal-story').dataset.finish = fin;
+    }
+
+    function proceedNext() {
+        document.getElementById('modal-story').style.display = 'none';
+        
+        // Увеличиваем прогресс!
+        unlockedIndex++;
+        
+        if (document.getElementById('modal-story').dataset.finish === 'true') {
+            let idx = ZONE_ORDER.indexOf(zone);
+            if(idx < ZONE_ORDER.length-1) {
+                // Переход в новую зону (но сначала на карту)
+                show('scr-world');
+            } else {
+                showVictoryScreen();
+            }
+        } else { 
+            // Переход на следующий уровень внутри зоны
+            zoneStage++; wave=1; 
+            updateStageVisuals(); 
+            // Сразу стартуем новый уровень без карты
+            pickLevel(zone, zoneStage);
+        }
+    }
+
+    function showVictoryScreen() {
+        document.getElementById('win-kills').innerText = stats.kills;
+        document.getElementById('win-solves').innerText = stats.solves;
+        document.getElementById('win-gold').innerText = hero.gold;
+        show('scr-win');
+        setBg('main');
+    }
+
+    function returnToMap() { document.getElementById('modal-loss').style.display = 'none'; show('scr-world'); setBg('main'); hero.hp = hero.max; }
+    function gameOver() { stopTimer(); document.getElementById('modal-loss').style.display = 'flex'; }
+    function updateUI() {
+        document.getElementById('hp-h').style.width = Math.max(0, (hero.hp/hero.max)*100) + "%"; document.getElementById('val-h').innerText = Math.floor(hero.hp);
+        document.getElementById('hp-e').style.width = Math.max(0, (enemy.hp/enemy.max)*100) + "%"; document.getElementById('val-e').innerText = Math.floor(enemy.hp);
+        document.getElementById('ui-gold').innerText = hero.gold;
+        document.getElementById('inv-potion').innerText = hero.inventory.potion; document.getElementById('inv-bomb').innerText = hero.inventory.bomb;
+    }
+    function log(t, c) { let l = document.getElementById('log-msg'); l.innerText = t; l.style.color = c||"#bbb"; }
+    function shake(id) { let e=document.getElementById(id); e.classList.remove('shake'); void e.offsetWidth; e.classList.add('shake'); }
+</script>
+</body>
+</html>
