@@ -384,13 +384,13 @@
     };
     
     const ACHIEVEMENTS_DATA = [
-        { id: 'first', icon: '🩸', title: 'Первая кровь', desc: 'Убить 1 врага' },
-        { id: 'hunter', icon: '☠️', title: 'Терминатор', desc: 'Убить 50 врагов' },
+        { id: 'first', icon: '🩸', title: 'Первая кровь', desc: 'Унечтожить 1 врага' },
+        { id: 'hunter', icon: '☠️', title: 'Терминатор', desc: 'Унечтожить 50 врагов' },
         { id: 'rich', icon: '💰', title: 'Магнат', desc: 'Накопить 500 золота' },
         { id: 'speed', icon: '⚡', title: 'Флэш', desc: 'Ответ за 2 сек' },
         { id: 'math', icon: '🧠', title: 'Математик', desc: 'Решить 20 примеров' },
         { id: 'survivor', icon: '❤️', title: 'Выживший', desc: 'Победа с HP < 20%' },
-        { id: 'bomber', icon: '💣', title: 'Подрывник', desc: 'Убить бомбой' }
+        { id: 'bomber', icon: '💣', title: 'Подрывник', desc: 'Унечтожить  бомбой' }
     ];
 
     const DIALOGUES = {
@@ -588,8 +588,8 @@
     function pickHero(t) {
         const i = { warrior:'⚔️', mage:'🧙‍♂️', ninja:'🥷', paladin:'🛡️', golem:'🗿', assassin:'🗡️', priest:'⚕️', barbarian:'🪓' };
         hero.icon = i[t];
-        if(t==='golem') { hero.max=500; hero.dmg=15; } else if(t==='mage') { hero.max=150; hero.dmg=50; } else if(t==='assassin') { hero.max=180; hero.dmg=60; }
-        else if(t==='barbarian') { hero.max=300; hero.dmg=35; } else { hero.max=250; hero.dmg=25; }
+        if(t==='golem') { hero.max=400; hero.dmg=15; } else if(t==='mage') { hero.max=150; hero.dmg=40; } else if(t==='assassin') { hero.max=100; hero.dmg=50; }
+        else if(t==='barbarian') { hero.max=250; hero.dmg=25; } else { hero.max=200; hero.dmg=25; }
         hero.hp = hero.max; document.getElementById('hero-vis').innerText = hero.icon; show('scr-world');
     }
     
@@ -721,3 +721,4 @@
 </body>
 
 </html>
+
