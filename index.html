@@ -588,7 +588,7 @@
     function pickHero(t) {
         const i = { warrior:'⚔️', mage:'🧙‍♂️', ninja:'🥷', paladin:'🛡️', golem:'🗿', assassin:'🗡️', priest:'⚕️', barbarian:'🪓' };
         hero.icon = i[t];
-        if(t==='golem') { hero.max=400; hero.dmg=15; } else if(t==='mage') { hero.max=150; hero.dmg=40; } else if(t==='assassin') { hero.max=100; hero.dmg=50; }
+        if(t==='golem') { hero.max=400; hero.dmg=15; } else if(t==='mage') { hero.max=150; hero.dmg=40; } else if(t==='warrior') { hero.max=220; hero.dmg=25; } else if(t==='assassin') { hero.max=100; hero.dmg=50; }
         else if(t==='barbarian') { hero.max=250; hero.dmg=25; } else { hero.max=200; hero.dmg=25; }
         hero.hp = hero.max; document.getElementById('hero-vis').innerText = hero.icon; show('scr-world');
     }
@@ -721,5 +721,6 @@
 </body>
 
 </html>
+
 
 
